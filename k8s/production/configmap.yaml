@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backforge-config
+  namespace: backforge
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  APP_URL: https://api.backforge.example.com
+  CORS_ORIGIN: https://api.backforge.example.com
+  LOG_LEVEL: info
+  ENABLE_GRAPHQL: "false"
+  METRICS_ENABLED: "true"
+  ENABLE_CLUSTER: "false"
+  QUEUE_NAME: jobs
+  QUEUE_CONCURRENCY: "6"
+  GLOBAL_RATE_LIMIT_MAX: "300"
+  GLOBAL_RATE_LIMIT_WINDOW_MINUTES: "15"
+  S3_REGION: us-east-1
+  S3_BUCKET: backforge-storage
+  FEATURE_FLAGS: '{"eventBusV1":true,"rolloutAutomation":true,"canaryDeployments":true,"auditEvents":true}'

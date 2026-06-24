@@ -1,0 +1,148 @@
+name: Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  K8S_NAMESPACE: ${{ vars.K8S_NAMESPACE || 'backforge' }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          VITE_FEATURE_FLAGS: ${{ vars.VITE_FEATURE_FLAGS }}
+        run: npm run build
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image reference
+        id: image
+        run: echo "image=${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            VITE_FEATURE_FLAGS=${{ vars.VITE_FEATURE_FLAGS }}
+          tags: |
+            ${{ steps.image.outputs.image }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: publish
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Create namespace
+        run: kubectl apply -f k8s/production/namespace.yaml
+
+      - name: Apply runtime config
+        run: |
+          kubectl -n "$K8S_NAMESPACE" create configmap backforge-config \
+            --from-literal=NODE_ENV=production \
+            --from-literal=PORT=3000 \
+            --from-literal=APP_URL="${{ vars.APP_URL }}" \
+            --from-literal=CORS_ORIGIN="${{ vars.CORS_ORIGIN }}" \
+            --from-literal=LOG_LEVEL="${{ vars.LOG_LEVEL || 'info' }}" \
+            --from-literal=ENABLE_GRAPHQL="${{ vars.ENABLE_GRAPHQL || 'false' }}" \
+            --from-literal=METRICS_ENABLED="${{ vars.METRICS_ENABLED || 'true' }}" \
+            --from-literal=ENABLE_CLUSTER=false \
+            --from-literal=QUEUE_NAME="${{ vars.QUEUE_NAME || 'jobs' }}" \
+            --from-literal=QUEUE_CONCURRENCY="${{ vars.QUEUE_CONCURRENCY || '6' }}" \
+            --from-literal=GLOBAL_RATE_LIMIT_MAX="${{ vars.GLOBAL_RATE_LIMIT_MAX || '300' }}" \
+            --from-literal=GLOBAL_RATE_LIMIT_WINDOW_MINUTES="${{ vars.GLOBAL_RATE_LIMIT_WINDOW_MINUTES || '15' }}" \
+            --from-literal=S3_REGION="${{ vars.S3_REGION || 'us-east-1' }}" \
+            --from-literal=S3_BUCKET="${{ vars.S3_BUCKET }}" \
+            --from-literal=FEATURE_FLAGS="${{ vars.FEATURE_FLAGS }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Verify production secrets exist
+        run: kubectl -n "$K8S_NAMESPACE" get secret backforge-secrets
+
+      - name: Run database migrations
+        run: |
+          kubectl -n "$K8S_NAMESPACE" delete job/backforge-migrate --ignore-not-found
+          sed "s#ghcr.io/backforge/backforge:latest#${{ needs.publish.outputs.image }}#g" k8s/production/migration-job.yaml | kubectl apply -f -
+          kubectl -n "$K8S_NAMESPACE" wait --for=condition=complete job/backforge-migrate --timeout=5m
+
+      - name: Apply service and autoscaling
+        run: |
+          kubectl apply -f k8s/production/service.yaml
+          kubectl apply -f k8s/production/hpa.yaml
+
+      - name: Deploy API
+        run: |
+          sed "s#ghcr.io/backforge/backforge:latest#${{ needs.publish.outputs.image }}#g" k8s/production/deployment.yaml | kubectl apply -f -
+          kubectl -n "$K8S_NAMESPACE" rollout status deployment/backforge-api --timeout=5m

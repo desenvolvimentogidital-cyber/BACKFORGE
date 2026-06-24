@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backforge-migrate
+  namespace: backforge
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: ghcr.io/backforge/backforge:latest
+          command: ["/bin/sh", "-c", "npm run prisma:deploy"]
+          envFrom:
+            - configMapRef:
+                name: backforge-config
+            - secretRef:
+                name: backforge-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
