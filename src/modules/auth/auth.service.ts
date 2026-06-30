@@ -1,5 +1,6 @@
 import { platformEvents } from '../../events/catalog.js';
 import bcrypt from 'bcrypt';
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { emitEvent } from '../../events/eventBus.js';
@@ -71,20 +72,9 @@ export class AuthService {
 
     const { password: _password, ...safeUser } = user;
     const tokens = await this.generateTokens(user.id);
-    const quickstartWorkspace = await projectService.getOrCreateQuickstartWorkspace(user.id);
-
     return {
       user: safeUser,
       ...tokens,
-      project: quickstartWorkspace.project,
-      apiKey: quickstartWorkspace.apiKey.key,
-      onboarding: {
-        project: quickstartWorkspace.project,
-        apiKey: quickstartWorkspace.apiKey.key,
-        apiKeyMasked: quickstartWorkspace.apiKey.maskedKey,
-        endpointPath: `/public/${quickstartWorkspace.quickstartTableName}`,
-        apiKeyHeader: 'x-api-key',
-      },
     };
   }
 
@@ -94,13 +84,14 @@ export class AuthService {
       expiresIn: '15m',
     });
     const refreshToken = uuidv4();
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await prisma.session.create({
       data: {
-        token: refreshToken,
+        token: refreshTokenHash,
         userId,
         expiresAt,
       },
@@ -110,8 +101,9 @@ export class AuthService {
   }
 
   async refresh(token: string) {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const session = await prisma.session.findUnique({
-      where: { token },
+      where: { token: tokenHash },
       include: { user: true },
     });
 
@@ -133,16 +125,17 @@ export class AuthService {
       where: { id: session.id },
       data: { 
         isRevoked: true,
-        replacedBy: newTokens.refreshToken
+        replacedBy: crypto.createHash('sha256').update(newTokens.refreshToken).digest('hex')
       },
     });
 
     return newTokens;
   }
 
-  async logout(token: string, userId: string) {
+  async logout(token: string) {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     await prisma.session.updateMany({
-      where: { userId, token },
+      where: { token: tokenHash },
       data: { isRevoked: true },
     });
     

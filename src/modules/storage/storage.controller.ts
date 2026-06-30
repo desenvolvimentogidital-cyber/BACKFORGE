@@ -7,6 +7,13 @@ function getTenantProjectId(request: FastifyRequest) {
 
 export const storageController = {
   async upload(request: FastifyRequest, reply: FastifyReply) {
+    if (!storageService.isUploadEnabled()) {
+      return reply.status(503).send({
+        error: 'File uploads are disabled because external storage is not configured.',
+        storageMode: storageService.getStorageMode(),
+      });
+    }
+
     const data = await request.file();
 
     if (!data) {

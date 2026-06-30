@@ -21,13 +21,17 @@
     "prisma:dev": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "clean": "node -e \"const { rmSync } = require('node:fs'); for (const dir of ['dist/server', 'dist/client', 'dist/server.js']) { try { rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch (error) { if (error && error.code !== 'ENOENT') { console.warn('[clean] could not fully remove ' + dir + ': ' + error.message); } } }\"",
-    "lint": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:migrations": "vitest run tests/production.integration.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.2.0",
     "@fastify/express": "^4.0.4",
     "@fastify/jwt": "^10.1.0",
@@ -74,10 +78,14 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "eslint": "^9.39.4",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.22.4",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "typescript-eslint": "^8.62.1",
+    "vite": "^6.2.0",
+    "vitest": "^3.2.6"
   },
   "overrides": {
     "fast-uri": "3.1.2",

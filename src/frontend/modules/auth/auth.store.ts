@@ -22,10 +22,10 @@ interface OnboardingState {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   onboarding: OnboardingState | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string, refreshToken?: string | null, onboarding?: OnboardingState | null) => void;
+  setAuth: (user: User, token: string, onboarding?: OnboardingState | null) => void;
+  setAccessToken: (token: string) => void;
   setOnboarding: (onboarding: OnboardingState | null) => void;
   clearOnboarding: () => void;
   logout: () => void;
@@ -36,23 +36,36 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       accessToken: null,
-      refreshToken: null,
       onboarding: null,
       isAuthenticated: false,
-      setAuth: (user, token, refreshToken = null, onboarding = null) =>
+      setAuth: (user, token, onboarding = null) =>
         set({
           user,
           accessToken: token,
-          refreshToken,
           onboarding,
           isAuthenticated: true,
         }),
+      setAccessToken: (accessToken) => set({ accessToken, isAuthenticated: true }),
       setOnboarding: (onboarding) => set({ onboarding }),
       clearOnboarding: () => set({ onboarding: null }),
-      logout: () => set({ user: null, accessToken: null, refreshToken: null, onboarding: null, isAuthenticated: false }),
+      logout: () => set({ user: null, accessToken: null, onboarding: null, isAuthenticated: false }),
     }),
     {
       name: 'auth-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const persisted = persistedState as Partial<AuthState>;
+        const user = persisted.user ?? null;
+
+        return {
+          user,
+          isAuthenticated: Boolean(user && persisted.isAuthenticated),
+        };
+      },
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

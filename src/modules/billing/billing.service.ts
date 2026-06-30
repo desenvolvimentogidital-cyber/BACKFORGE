@@ -12,13 +12,19 @@ let stripeClient: Stripe | null = null;
 
 function hasCheckoutConfigured(planKey: 'basic' | 'pro') {
   const plan = getPlanConfig(planKey);
-  return Boolean(process.env.STRIPE_SECRET_KEY && plan.priceEnv && process.env[plan.priceEnv]);
+  return Boolean(
+    process.env.STRIPE_SECRET_KEY
+    && process.env.STRIPE_WEBHOOK_SECRET
+    && plan.priceEnv
+    && process.env[plan.priceEnv]
+  );
 }
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!secretKey) {
+  if (!secretKey || !webhookSecret) {
     throw new Error('Stripe is not configured');
   }
 

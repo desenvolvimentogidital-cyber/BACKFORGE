@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { useAuthStore } from '../../modules/auth/auth.store';
 import { isEnabled } from '../../lib/flags';
+import { api } from '../../lib/api';
 
 const sidebarItems = [
   ...(isEnabled('newDashboard') ? [{ icon: Sparkles, label: 'Overview', href: '/overview' }] : []),
@@ -26,6 +27,9 @@ const sidebarItems = [
 
 export function DashboardLayout() {
   const { logout, user } = useAuthStore();
+  const handleLogout = () => {
+    void api.post('/auth/logout', {}).finally(logout);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground lg:flex">
@@ -44,7 +48,7 @@ export function DashboardLayout() {
               </div>
             </div>
 
-            <Button variant="ghost" size="icon" className="rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white lg:hidden" onClick={logout}>
+            <Button variant="ghost" size="icon" className="rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white lg:hidden" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -79,7 +83,7 @@ export function DashboardLayout() {
                   <p className="truncate text-xs text-slate-300/68">{user?.email}</p>
                 </div>
               </div>
-              <Button variant="ghost" className="mt-4 w-full justify-start gap-3 rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={logout}>
+              <Button variant="ghost" className="mt-4 w-full justify-start gap-3 rounded-2xl text-slate-300 hover:bg-white/10 hover:text-white" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" />
                 Logout
               </Button>

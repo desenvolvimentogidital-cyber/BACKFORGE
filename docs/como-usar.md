@@ -101,7 +101,9 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/backforge?schema=pub
 ```bash
 npm run dev              # inicia API + frontend Vite no servidor Fastify
 npm run dev:worker       # inicia worker BullMQ
-npm run lint             # typecheck TypeScript
+npm run typecheck        # valida tipos TypeScript
+npm run lint             # executa ESLint
+npm test                 # testes integrados com PostgreSQL descartavel
 npm run build            # build completo para producao
 npm run start            # roda dist/server.js
 npm run start:worker     # roda worker compilado
@@ -130,11 +132,13 @@ STRIPE_WEBHOOK_SECRET=""
 STRIPE_PRICE_BASIC=""
 STRIPE_PRICE_PRO=""
 
+STORAGE_DRIVER="local"
 S3_REGION="us-east-1"
 S3_ENDPOINT=""
 S3_ACCESS_KEY=""
 S3_SECRET_KEY=""
 S3_BUCKET="backforge-storage"
+S3_FORCE_PATH_STYLE=false
 ```
 
 Em producao:
@@ -147,7 +151,12 @@ DATABASE_URL="postgresql://..."
 REDIS_URL="redis://..."
 CORS_ORIGIN="https://seu-dominio.com"
 APP_URL="https://seu-dominio.com"
+STORAGE_DRIVER="s3"
 ```
+
+Para Railway, consulte `docs/railway-deploy.md`. Em producao, uploads ficam
+desabilitados com resposta 503 enquanto `STORAGE_DRIVER=s3` e as credenciais do
+Bucket nao estiverem configurados.
 
 ## Fluxo basico de uso
 

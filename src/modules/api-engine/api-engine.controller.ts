@@ -9,7 +9,7 @@ const policyService = new PolicyService();
 const hookService = new HookService();
 
 export class ApiEngineController {
-  async handleGet(request: FastifyRequest, reply: FastifyReply) {
+  async handleGet(request: FastifyRequest, _reply: FastifyReply) {
     const { table } = request.params as { table: string };
     const projectId = (request as any).projectId;
     const userId = (request as any).userId;

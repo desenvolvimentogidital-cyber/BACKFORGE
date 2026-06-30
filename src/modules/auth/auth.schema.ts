@@ -12,7 +12,7 @@ export const loginSchema = z.object({
 });
 
 export const refreshSchema = z.object({
-  refreshToken: z.string(),
+  refreshToken: z.string().min(1).optional(),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

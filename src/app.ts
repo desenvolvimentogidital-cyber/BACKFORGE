@@ -6,6 +6,7 @@ import jwt from '@fastify/jwt';
 import cors from '@fastify/cors';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyExpress from '@fastify/express';
+import fastifyCookie from '@fastify/cookie';
 import helmet from 'helmet';
 import multipart from '@fastify/multipart';
 import { ZodError } from 'zod';
@@ -99,6 +100,7 @@ export async function buildApp() {
   }
 
   // Plugins
+  await app.register(fastifyCookie);
   await app.register(fastifyExpress);
   app.use('/webhooks/stripe', createStripeWebhookRouter());
 
@@ -132,7 +134,7 @@ export async function buildApp() {
 
   await app.register(cors, {
     origin: getCorsOrigins(),
-    credentials: false,
+    credentials: true,
   });
   await app.register(fastifyRateLimit, {
     global: true,

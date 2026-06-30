@@ -30,14 +30,22 @@ async function processJob(name: string, data: Record<string, unknown>) {
 
 async function startWorker() {
   if (!hasRedisConfiguration) {
-    logger.warn('Redis is not configured, queue worker will not start.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('REDIS_URL is required for the production queue worker');
+    }
+
+    logger.warn('Redis is not configured, development queue worker will not start.');
     return;
   }
 
   const connection = createBullMqConnection('worker');
 
   if (!connection) {
-    logger.warn('Queue worker connection could not be created.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Redis queue worker connection could not be created');
+    }
+
+    logger.warn('Development queue worker connection could not be created.');
     return;
   }
 

@@ -1,7 +1,14 @@
 import { isCompiledRuntime } from './runtime.js';
 
 const VALID_NODE_ENVS = new Set(['development', 'test', 'production']);
-const DISALLOWED_SECRET_SNIPPETS = ['change-me', 'super-secret', 'replace-me', 'example-secret'];
+const DISALLOWED_SECRET_SNIPPETS = [
+  'change-me',
+  'change-before-prod',
+  'local-dev',
+  'super-secret',
+  'replace-me',
+  'example-secret',
+];
 
 function readEnv(name: string) {
   return process.env[name]?.trim() ?? '';
@@ -24,7 +31,7 @@ function assertStrongSecret(name: string, value: string) {
 
   const normalizedValue = value.toLowerCase();
 
-  if (DISALLOWED_SECRET_SNIPPETS.some((snippet) => normalizedValue.includes(snippet))) {
+  if (isProductionEnvironment() && DISALLOWED_SECRET_SNIPPETS.some((snippet) => normalizedValue.includes(snippet))) {
     throw new Error(`${name} must not use a placeholder or default value`);
   }
 }
@@ -120,6 +127,17 @@ export function validateRuntimeEnvironment() {
     if (corsOrigin.includes('localhost') || corsOrigin.includes('127.0.0.1')) {
       throw new Error('CORS_ORIGIN cannot use localhost in production');
     }
+
+    const storageDriver = readEnv('STORAGE_DRIVER') || 'disabled';
+    if (!['disabled', 's3'].includes(storageDriver)) {
+      throw new Error('STORAGE_DRIVER must be "s3" or "disabled" in production');
+    }
+
+    if (storageDriver === 's3') {
+      readRequiredEnv('S3_ACCESS_KEY');
+      readRequiredEnv('S3_SECRET_KEY');
+      readRequiredEnv('S3_BUCKET');
+    }
   }
 
   if (isCompiledRuntime && nodeEnv !== 'production') {
@@ -130,23 +148,30 @@ export function validateRuntimeEnvironment() {
 }
 
 export function getS3Config() {
-  const region = process.env.S3_REGION || 'us-east-1';
-  const endpoint = process.env.S3_ENDPOINT;
-  const accessKeyId = process.env.S3_ACCESS_KEY;
-  const secretAccessKey = process.env.S3_SECRET_KEY;
-  const bucket = process.env.S3_BUCKET || 'backforge-storage';
+  const storageDriver = readEnv('STORAGE_DRIVER') || (isProductionEnvironment() ? 'disabled' : 'local');
 
-  if (!accessKeyId || !secretAccessKey) {
+  if (storageDriver !== 's3') {
     return null;
   }
+
+  const region = process.env.S3_REGION || 'us-east-1';
+  const endpoint = process.env.S3_ENDPOINT;
+  const accessKeyId = readRequiredEnv('S3_ACCESS_KEY');
+  const secretAccessKey = readRequiredEnv('S3_SECRET_KEY');
+  const bucket = readRequiredEnv('S3_BUCKET');
 
   return {
     region,
     endpoint,
+    forcePathStyle: readEnv('S3_FORCE_PATH_STYLE') === 'true',
     credentials: {
       accessKeyId,
       secretAccessKey,
     },
     bucket,
   };
+}
+
+export function getStorageDriver() {
+  return readEnv('STORAGE_DRIVER') || (isProductionEnvironment() ? 'disabled' : 'local');
 }

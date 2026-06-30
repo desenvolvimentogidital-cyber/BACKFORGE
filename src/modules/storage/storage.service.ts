@@ -4,7 +4,7 @@ import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { MultipartFile } from '@fastify/multipart';
 import { prisma } from '../../shared/prisma.js';
-import { getS3Config } from '../../shared/env.js';
+import { getS3Config, getStorageDriver } from '../../shared/env.js';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Readable } from 'node:stream';
 
@@ -80,7 +80,18 @@ export class StorageService {
     }
   }
 
+  isUploadEnabled() {
+    return getStorageDriver() === 'local' || Boolean(this.s3Client && this.s3Bucket);
+  }
+
+  getStorageMode() {
+    return getStorageDriver();
+  }
+
   async uploadFile(projectId: string, file: MultipartFile) {
+    if (!this.isUploadEnabled()) {
+      throw new Error('External storage is not configured. Set STORAGE_DRIVER=s3 and the S3 credentials.');
+    }
     const originalName = sanitizeOriginalName(file.filename);
     const extension = sanitizeExtension(originalName);
     const storedFilename = `${Date.now()}-${crypto.randomUUID()}${extension}`;

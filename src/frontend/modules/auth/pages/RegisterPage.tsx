@@ -51,9 +51,9 @@ export function RegisterPage() {
 
     try {
       const response = await api.post('/auth/register', { name, email, password });
-      const { user, accessToken, refreshToken } = response.data;
+      const { user, accessToken } = response.data;
       const onboarding = getOnboardingPayload(response.data);
-      setAuth(user, accessToken, refreshToken, onboarding);
+      setAuth(user, accessToken, onboarding);
       navigate('/overview');
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed');

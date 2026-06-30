@@ -1,7 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import fs from 'node:fs';
-import fsPromises from 'node:fs/promises';
-import path from 'node:path';
 import { storageService } from '../storage/storage.service.js';
 import { z } from 'zod';
 import { databaseService } from '../database/database.service.js';
@@ -23,8 +20,6 @@ const publicRowsQuerySchema = z.object({
 });
 
 export async function publicRoutes(app: FastifyInstance) {
-  const uploadsRoot = path.resolve(process.cwd(), 'uploads');
-
   app.get('/files/:filename', async (request, reply) => {
     const { filename } = request.params as { filename: string };
     const storedFile = await prisma.storedFile.findUnique({

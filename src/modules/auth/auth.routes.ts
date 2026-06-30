@@ -7,11 +7,11 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/register', controller.register);
   app.post('/login', controller.login);
   app.post('/refresh', controller.refresh);
+  app.post('/logout', controller.logout);
   
   // Protected routes
   app.register(async (instance) => {
     instance.addHook('preHandler', instance.authenticate);
-    instance.post('/logout', controller.logout);
     instance.get('/me', controller.me);
   });
 }

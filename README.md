@@ -22,6 +22,7 @@ BACKFORGE is a backend platform starter for SaaS teams that need authentication,
 
 ## Production Assets
 
+- Railway production guide: `docs/railway-deploy.md`
 - Kubernetes platform guide: `docs/kubernetes-platform.md`
 - Oracle Cloud / VPS guide: `docs/oracle-cloud-deploy.md`
 - Scaling and multi-region notes: `docs/scaling-architecture.md`
@@ -31,7 +32,7 @@ BACKFORGE is a backend platform starter for SaaS teams that need authentication,
 
 ## Delivery Model
 
-- Pull requests run CI validation with `lint` and `build`.
+- Pull requests should run `typecheck`, `lint`, `test`, and `build`.
 - Production migrations run with `npm run prisma:deploy`.
 - Pushes to `main` build and publish the production image, then deploy a canary or blue/green overlay to Kubernetes.
 - Rollouts are designed around Argo Rollouts, Prometheus analysis, and Redis-backed application primitives that already exist in the app runtime.

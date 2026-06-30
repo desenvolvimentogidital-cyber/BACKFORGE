@@ -46,21 +46,20 @@ export class GatewayController {
 
   async handlePost(request: FastifyRequest, reply: FastifyReply) {
     const { table } = request.params as { table: string };
-    const projectId = (request as any).projectId;
     return reply.status(201).send({ message: `Created in ${table}`, data: request.body });
   }
 
-  async handleGetOne(request: FastifyRequest, reply: FastifyReply) {
+  async handleGetOne(request: FastifyRequest, _reply: FastifyReply) {
     const { table, id } = request.params as { table: string, id: string };
     return { table, id, data: {} };
   }
 
-  async handlePut(request: FastifyRequest, reply: FastifyReply) {
+  async handlePut(request: FastifyRequest, _reply: FastifyReply) {
     const { table, id } = request.params as { table: string, id: string };
     return { message: `Updated ${id} in ${table}`, data: request.body };
   }
 
-  async handleDelete(request: FastifyRequest, reply: FastifyReply) {
+  async handleDelete(request: FastifyRequest, _reply: FastifyReply) {
     const { table, id } = request.params as { table: string, id: string };
     return { message: `Deleted ${id} from ${table}` };
   }

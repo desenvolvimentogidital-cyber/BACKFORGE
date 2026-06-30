@@ -4,7 +4,7 @@ import { prisma } from '../shared/prisma.js';
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   try {
     await request.jwtVerify();
-  } catch (err) {
+  } catch {
     return reply.status(401).send({ error: 'Unauthorized' });
   }
 }
