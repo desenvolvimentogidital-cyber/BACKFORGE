@@ -32,11 +32,12 @@ COPY --chown=node:node prisma ./prisma
 
 RUN npm ci --omit=dev \
  && npm run prisma:generate \
+ && mkdir -p /app/uploads \
+ && chown -R node:node /app/uploads \
  && npm cache clean --force
 
 COPY --from=builder --chown=node:node /app/dist ./dist
 
-# Copia o cliente Prisma gerado e os engines
 COPY --from=builder --chown=node:node /app/src/generated ./src/generated
 
 USER node
